@@ -3,53 +3,54 @@ package tidbscanProject;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Scanner;
-import java.util.Set;
 
 public class Tidbscan {
 	
 	public static final int UNCLASSIFIED = 0;
 	public static final int NOISE = -1;
+	private static ArrayList<Point> dataset;
+	private static ArrayList<Point> clusteredPoints;
 
 	public static void main(String[] args) {
 
-		ArrayList<Point> dataset = new ArrayList<>();
-		
 		try {
-			dataset = datasetToList("test.txt");
+			dataset = datasetToList("datasetS1.txt");
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 		
 		if(dataset.size() != 0) {
-			ArrayList<Point> clusteredDataset = TI_DBSCAN(dataset, 2, 2);
+			ArrayList<Point> clusteredDataset = TI_DBSCAN(2, 2);
+			
+			System.out.println("CLUSTERED DATASET");
+			for(Point p: clusteredDataset)
+				System.out.println(p);
+			
 		}else {
 			System.out.println("Incorrect dataset");}
 
 	}
 	
 	/*
-	 * D: set of points that is subject to clustering
 	 * eps: radius of the point neighborhood
 	 * minPts: required minimal number of points within Eps-neighborhood
 	 */
-	public static ArrayList<Point> TI_DBSCAN(ArrayList<Point> D, double eps, int minPts){
+	public static ArrayList<Point> TI_DBSCAN(double eps, int minPts){
 		
-		// D' = empty set of points
-		ArrayList<Point> clusteredPoints = new ArrayList<>();
+		// D' = empty set of points (clusteredPoints)
+		clusteredPoints = new ArrayList<>();
 		double[] coordsZero = {0, 0};
 		Point referencePoint = new Point(coordsZero);
 		
-		for(Point point: D) {
+		for(Point point: dataset) {
 			point.setDistance(distance(point, referencePoint));
 		}
 		
 		// sorts all points of D in a non decreasing way by distance
-		Collections.sort(D, new Comparator<Point>() {		
+		Collections.sort(dataset, new Comparator<Point>() {		
 			@Override
 			public int compare(Point x, Point y) {
 				return Double.compare(x.getDistance(), y.getDistance());
@@ -59,32 +60,38 @@ public class Tidbscan {
 		// initial cluster
 		int currentClusterID = 1;
 		
-		for(Point point: D) {
-			if(TI_ExpandCluster(D, clusteredPoints, point, currentClusterID, eps, minPts))
-				currentClusterID++;
+		for(int i=0; i<dataset.size(); i++) {
+			Point point = dataset.get(i);
+			if(point != null) {
+				if(TI_ExpandCluster(point, currentClusterID, eps, minPts))
+					currentClusterID++; }
 		}
-		
+		while(dataset.remove(null)) {}
 		
 		return clusteredPoints;
 	}
 	
-	public static boolean TI_ExpandCluster(ArrayList<Point> D, ArrayList<Point> clusteredPoints, Point p, int clusterID, double eps, int minPts) {
+	public static boolean TI_ExpandCluster(Point p, int clusterID, double eps, int minPts) {
 		
+		ArrayList<Point> D = dataset; 
 		// seeds = NEps(p)\{p}
-		ArrayList<Point> seeds = TI_Neighborhood(D, p, eps);
+		ArrayList<Point> seeds = TI_Neighborhood(p, eps);
 		
 		p.setNeighborsNo(p.getNeighborsNo() + seeds.size()); // includes p itself
 		
 		if(p.getNeighborsNo() < minPts) { // noise or border point
-			p.setClusterID(NOISE);
+			
+			p.setClusterID(NOISE);	
 			
 			for(Point q: seeds) {
 				q.addPointToBorder(p);
 				q.setNeighborsNo(q.getNeighborsNo() + 1);
 			}			
 			p.setBorder(new ArrayList<>());
-			D.remove(D.indexOf(p));
+			D.set(D.indexOf(p), null); // moves p from D to D'
 			clusteredPoints.add(p);
+			
+			dataset = D;
 			
 			return false; // cluster hasn't been expanded (point is noise)
 		}
@@ -96,34 +103,71 @@ public class Tidbscan {
 				q.setNeighborsNo(q.getNeighborsNo() + 1);
 			}
 			for(Point q: p.getBorder()) {
-				int index = clusteredPoints.indexOf(q);
+				int index = clusteredPoints.indexOf(q); // assigns cluster id to q in D'
 				if(index == -1)
 					clusteredPoints.add(q);
 				index = clusteredPoints.indexOf(q);
 				clusteredPoints.get(index).setClusterID(clusterID);
 			}
 			p.setBorder(new ArrayList<>());
+			D.set(D.indexOf(p), null); // moves p from D to D'
+			clusteredPoints.add(p);	// clusteredPoints stores analyzed points
 			
 			while(seeds.size() > 0) {
-				Point currentPoint = seeds.get(0);
-				ArrayList<Point> currentSeeds = TI_Neighborhood(D, currentPoint, eps);
+				Point currentPoint = seeds.get(0); // first point
+				ArrayList<Point> currentSeeds = TI_Neighborhood(currentPoint, eps);
 				currentPoint.setNeighborsNo(currentPoint.getNeighborsNo() + currentSeeds.size());
+				
+				if(currentPoint.getNeighborsNo() < minPts) { // currentPoint is a border point
+					for(Point q: currentSeeds)
+						q.setNeighborsNo(q.getNeighborsNo() + 1);
+				}
+				else {	// currentPoint is a core point
+					for(Point q: currentSeeds) {
+						q.setNeighborsNo(q.getNeighborsNo() + 1);
+						
+						if(q.getClusterID() == UNCLASSIFIED) {
+							q.setClusterID(clusterID);
+							currentSeeds.remove(currentSeeds.indexOf(q)); // moves currentPoint from currentSeeds to seeds
+							seeds.add(q);
+						}
+						else {
+							currentSeeds.remove(currentSeeds.indexOf(q)); // deletes currentPoint from currentSeeds
+						}
+						if(currentSeeds.size() == 0)
+							break;
+					}
+					for(Point q: currentPoint.getBorder()) {
+						int index = clusteredPoints.indexOf(q); // assigns a cluster id to q in D'
+						if(index == -1)
+							clusteredPoints.add(q);
+						index = clusteredPoints.indexOf(q);
+						clusteredPoints.get(index).setClusterID(clusterID);
+					}						
+				}
+				currentPoint.setBorder(new ArrayList<>());
+				D.set(D.indexOf(currentPoint), null); // moves currentPoint from D to D'
+				clusteredPoints.add(currentPoint);
+				seeds.remove(seeds.indexOf(currentPoint));
 			}
+			dataset = D;
+			return true; // the cluster has been expanded
 		}
-		
-		return false;
 	}
 	
-	public static ArrayList<Point> TI_Neighborhood(ArrayList<Point> D, Point p, double eps){
+	// gets p's eps-neighborhood
+	public static ArrayList<Point> TI_Neighborhood(Point p, double eps){
 		
-		ArrayList<Point> neighorhood = TI_Backward_Neighborhood(D, p, eps);
-		neighorhood.addAll(TI_Forward_Neighborhood(D, p, eps));
+		ArrayList<Point> neighorhood = TI_Backward_Neighborhood(p, eps);
+		neighorhood.addAll(TI_Forward_Neighborhood(p, eps));
 		
 		return neighorhood;
 	}
 	
-	public static ArrayList<Point> TI_Backward_Neighborhood(ArrayList<Point> D, Point p, double eps){
+	// gets part of p's eps-neighborhood from its preceding points in D
+	public static ArrayList<Point> TI_Backward_Neighborhood(Point p, double eps){
 		
+		ArrayList<Point> D = dataset;
 		ArrayList<Point> seeds = new ArrayList<>();
 		double backwardThreshold = p.getDistance() - eps;
 		
@@ -131,19 +175,23 @@ public class Tidbscan {
 		for(int i = D.indexOf(p)-1; i >= 0; i--) {
 			
 			Point q = D.get(i);
-			
-			if(q.getDistance() < backwardThreshold)
-				break;
-			
-			if(distance(q, p) <= eps)
-				seeds.add(q);
+			if(q != null) {
+				if(q.getDistance() < backwardThreshold)
+					break;
+				
+				if(distance(q, p) <= eps)
+					seeds.add(q);
+			}
 		}		
+		dataset = D;
 		
 		return seeds;
 	}
 	
-	public static ArrayList<Point> TI_Forward_Neighborhood(ArrayList<Point> D, Point p, double eps){
+	// gets part of p's eps-neighborhood from its following points in D
+	public static ArrayList<Point> TI_Forward_Neighborhood(Point p, double eps){
 		
+		ArrayList<Point> D = dataset;
 		ArrayList<Point> seeds = new ArrayList<>();
 		double forwardThreshold = p.getDistance() + eps;
 		
@@ -152,12 +200,15 @@ public class Tidbscan {
 			
 			Point q = D.get(i);
 			
-			if(q.getDistance() > forwardThreshold)
-				break;
-			
-			if(distance(q, p) <= eps)
-				seeds.add(q);
+			if(q != null) {
+				if(q.getDistance() > forwardThreshold)
+					break;
+				
+				if(distance(q, p) <= eps)
+					seeds.add(q);
+			}
 		}		
+		dataset = D;
 		
 		return seeds;
 	}
