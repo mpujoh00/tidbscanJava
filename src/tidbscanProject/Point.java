@@ -36,6 +36,10 @@ public class Point {
 			this.coordinates = coord;
 	}*/
 	
+	public void addPointToBorder(Point p) {
+		this.border.add(p);
+	}
+	
 	public void setClusterID(int id) {
 		this.clusterID = id;
 	}
