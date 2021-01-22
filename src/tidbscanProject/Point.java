@@ -1,6 +1,7 @@
 package tidbscanProject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Point {
 
@@ -65,5 +66,15 @@ public class Point {
 	
 	public ArrayList<Point> getBorder() {
 		return this.border;
+	}
+	
+	public int[] getCoordinates() {
+		return this.coordinates;
+	}
+	
+	public String toString() {
+		
+		return Arrays.toString(this.coordinates) + " ClusterID = " + this.clusterID + " Distance = " + this.distance + " NeighborsNo = "
+				+ this.neighborsNo + " Border = " + this.border.size() + " points\n";
 	}
 }
