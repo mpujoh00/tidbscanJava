@@ -2,6 +2,7 @@ package tidbscanProject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import static tidbscanProject.Tidbscan.UNCLASSIFIED;
 
 public class Point {
 
@@ -10,10 +11,9 @@ public class Point {
 	private int neighborsNo;	// number of neighbors of p found, initially assigned to 1 (itself belongs to its own eps-neighborhood)
 	private ArrayList<Point> border;		// information about neighbors of p that are non-core points (not clear if they're noise or border), initially assigned an empty set
 	//private String[] metadata;
-	private int[] coordinates;
-	static final int UNCLASSIFIED = 0;
+	private double[] coordinates;
 	
-	public Point(int[] coord) {	// , String[] metadata
+	public Point(double[] coord) {	// , String[] metadata
 		
 		this.clusterID = UNCLASSIFIED;
 		this.neighborsNo = 1;
@@ -68,7 +68,7 @@ public class Point {
 		return this.border;
 	}
 	
-	public int[] getCoordinates() {
+	public double[] getCoordinates() {
 		return this.coordinates;
 	}
 	
