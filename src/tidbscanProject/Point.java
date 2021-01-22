@@ -1,16 +1,69 @@
 package tidbscanProject;
 
+import java.util.ArrayList;
+
 public class Point {
 
-	int[] coordinates;
-	String clusterID;	
-	double distance;
-	int neighborsNum;
-	Point[] border;
-	String[] metadata;
+	private int clusterID;	// label of a cluster to which the point p belongs, initially assigned to UNCLASSIFIED
+	private double distance;	// distance of p to the reference point r
+	private int neighborsNo;	// number of neighbors of p found, initially assigned to 1 (itself belongs to its own eps-neighborhood)
+	private ArrayList<Point> border;		// information about neighbors of p that are non-core points (not clear if they're noise or border), initially assigned an empty set
+	//private String[] metadata;
+	private int[] coordinates;
+	static final int UNCLASSIFIED = 0;
 	
-	public Point(Point point, Point referencePoint, String[] metadata) {
+	public Point(int[] coord) {	// , String[] metadata
 		
+		this.clusterID = UNCLASSIFIED;
+		this.neighborsNo = 1;
+		this.border = new ArrayList<Point>();		
+		//if(metadata != null)
+		//	this.metadata = metadata;
+		if(coord != null)
+			this.coordinates = coord;
+	}
+	
+	/*public Point(int[] coord, double dist) {	// , String[] metadata
 		
+		this.clusterID = UNCLASSIFIED;
+		this.distance = dist;
+		this.neighborsNo = 1;
+		this.border = new ArrayList<Point>();		
+		//if(metadata != null)
+		//	this.metadata = metadata;
+		if(coord != null)
+			this.coordinates = coord;
+	}*/
+	
+	public void setClusterID(int id) {
+		this.clusterID = id;
+	}
+	
+	public void setDistance(double dist) {
+		this.distance = dist;
+	}
+	
+	public void setNeighborsNo(int neigh) {
+		this.neighborsNo = neigh;
+	}
+	
+	public void setBorder(ArrayList<Point> border) {
+		this.border = border;
+	}
+	
+	public int getClusterID() {
+		return this.clusterID;
+	}
+	
+	public double getDistance() {
+		return this.distance;
+	}
+	
+	public int getNeighborsNo() {
+		return this.neighborsNo;
+	}
+	
+	public ArrayList<Point> getBorder() {
+		return this.border;
 	}
 }
